@@ -113,4 +113,656 @@
 
         <!-- 主表格區塊 -->
         <div id="capture-area" class="bg-slate-800/90 rounded-2xl border border-slate-700 shadow-xl overflow-hidden flex flex-col">
-            <div class="p-4 bg-slate-800 border-b border-slate-700 flex flex-wrap items-center j
+            <div class="p-4 bg-slate-800 border-b border-slate-700 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                        <input type="checkbox" id="select-all-checkbox" onchange="toggleSelectAll(this)" class="rounded bg-slate-900 border-slate-700 text-amber-500 w-4 h-4">
+                        <span>全選成員</span>
+                    </label>
+                    <button onclick="clearSelection()" class="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs border border-slate-600">清除勾選</button>
+                    <span class="text-xs text-slate-400" id="selected-count-badge">已選 0 位</span>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <label class="px-3 py-1.5 bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/30 rounded-xl text-xs font-semibold cursor-pointer">
+                        <i class="fa-solid fa-images"></i> 批量插入圖片
+                        <input type="file" id="batch-images-input" accept="image/*" class="hidden" onchange="batchUploadImages(event)">
+                    </label>
+                    <button onclick="copyAsTextFile()" class="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-semibold">
+                        <i class="fa-solid fa-copy"></i> 複製未達標報表
+                    </button>
+                    <button onclick="exportToImage()" class="px-3 py-1.5 bg-teal-600/20 hover:bg-teal-600/30 text-teal-300 border border-teal-500/30 rounded-xl text-xs font-semibold">
+                        <i class="fa-solid fa-file-image"></i> 匯出圖片檔
+                    </button>
+                    <button onclick="exportToExcel()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-xs border border-slate-600">
+                        <i class="fa-solid fa-file-excel text-emerald-400"></i> 匯出 Excel
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-900/80 text-slate-400 uppercase tracking-wider border-b border-slate-700">
+                            <th class="p-3 w-12 text-center">選取</th>
+                            <th class="p-3 min-w-[420px]">成員名稱與原ID/前身 (備註說明)</th>
+                            <th class="p-3 text-center">
+                                <div class="flex flex-col items-center gap-1">
+                                    <span class="text-amber-400 font-bold text-sm">個人目標</span>
+                                    <input type="date" id="global-target-date" onchange="updateGlobalDate('targetDate', this.value)" class="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-amber-300 font-bold text-xs text-center cursor-pointer">
+                                </div>
+                            </th>
+                            <th class="p-3 text-center">
+                                <div class="flex flex-col items-center gap-1">
+                                    <span class="text-sky-400 font-bold text-sm">下週目標</span>
+                                    <input type="date" id="global-next-date" onchange="updateGlobalDate('nextDate', this.value)" class="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-sky-300 font-bold text-xs text-center cursor-pointer">
+                                </div>
+                            </th>
+                            <th class="p-3 text-center">
+                                <div class="flex flex-col items-center gap-1">
+                                    <span class="text-emerald-400 font-bold text-sm">捐獻總額與截圖憑證</span>
+                                    <input type="date" id="global-update-date" onchange="updateGlobalDate('updateDate', this.value)" class="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-emerald-300 font-bold text-xs text-center cursor-pointer">
+                                </div>
+                            </th>
+                            <th class="p-3 text-center">備註</th>
+                            <th class="p-3 text-center w-16">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="members-table-body" class="divide-y divide-slate-700/50"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 備註修改彈窗 -->
+    <div id="note-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <h3 class="text-lg font-bold text-amber-400"><i class="fa-solid fa-pen-to-square"></i> 編輯備註</h3>
+            <div class="text-xs text-slate-400">成員: <span class="text-white font-bold" id="modal-member-name"></span></div>
+            <textarea id="modal-note-textarea" rows="4" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-amber-500"></textarea>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeNoteModal()" class="px-4 py-2 bg-slate-700 text-slate-200 rounded-xl text-xs">取消</button>
+                <button onclick="saveNoteModal()" class="px-4 py-2 bg-amber-500 text-slate-950 font-bold rounded-xl text-xs">儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 盟友唯讀檢視 (精簡) -->
+    <div id="readonly-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl p-6 space-y-5 shadow-2xl max-h-[92vh] flex flex-col">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-xl font-black text-amber-400"><i class="fa-solid fa-shield-halved"></i> 盟友公開查詢 (精簡版)</h3>
+                <button onclick="closeReadOnlyViewModal()" class="text-slate-400 hover:text-white text-lg p-2"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="overflow-y-auto flex-1 space-y-2 border border-slate-800 rounded-xl p-2 bg-slate-950/50">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-900 text-slate-400 sticky top-0 border-b border-slate-800">
+                            <th class="p-3">成員名稱</th>
+                            <th class="p-3">原ID / 前身</th>
+                            <th class="p-3 text-center">個人目標</th>
+                            <th class="p-3 text-center">捐獻總額</th>
+                            <th class="p-3 text-center">狀態</th>
+                            <th class="p-3 text-center">備註</th>
+                        </tr>
+                    </thead>
+                    <tbody id="readonly-table-body" class="divide-y divide-slate-800/60"></tbody>
+                </table>
+            </div>
+            <div class="flex justify-between items-center pt-2 border-t border-slate-800">
+                <button onclick="copyReadOnlySummaryText()" class="px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5">
+                    <i class="fa-solid fa-copy"></i> 複製精簡報表文字
+                </button>
+                <button onclick="closeReadOnlyViewModal()" class="px-5 py-2 bg-slate-800 text-slate-200 rounded-xl text-xs">關閉視窗</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 盟友唯讀檢視 (詳細) -->
+    <div id="detailed-readonly-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-5xl p-6 space-y-5 shadow-2xl max-h-[92vh] flex flex-col">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-xl font-black text-teal-400"><i class="fa-solid fa-table-list"></i> 盟友公開查詢 (詳細版)</h3>
+                <button onclick="closeDetailedReadOnlyModal()" class="text-slate-400 hover:text-white text-lg p-2"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="overflow-y-auto flex-1 space-y-2 border border-slate-800 rounded-xl p-2 bg-slate-950/50">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-900 text-slate-400 sticky top-0 border-b border-slate-800">
+                            <th class="p-3">成員名稱</th>
+                            <th class="p-3">原ID / 前身</th>
+                            <th class="p-3 text-center">個人目標</th>
+                            <th class="p-3 text-center">下週目標</th>
+                            <th class="p-3 text-center">本週現捐</th>
+                            <th class="p-3 text-center">總捐獻</th>
+                            <th class="p-3 text-center">狀態詳情</th>
+                            <th class="p-3 text-center">截圖憑證</th>
+                            <th class="p-3 text-center">備註</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailed-readonly-table-body" class="divide-y divide-slate-800/60"></tbody>
+                </table>
+            </div>
+            <div class="flex justify-between items-center pt-2 border-t border-slate-800">
+                <button onclick="copyDetailedReadOnlySummaryText()" class="px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5">
+                    <i class="fa-solid fa-copy"></i> 複製詳細報表文字
+                </button>
+                <button onclick="closeDetailedReadOnlyModal()" class="px-5 py-2 bg-slate-800 text-slate-200 rounded-xl text-xs">關閉視窗</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 備份碼彈窗 -->
+    <div id="backup-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl">
+            <h3 class="text-lg font-bold text-sky-400">儲存備份碼 (含圖片與完整記錄)</h3>
+            <textarea id="backup-textarea" rows="8" readonly class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-[11px] font-mono text-sky-300"></textarea>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeBackupModal()" class="px-4 py-2 bg-slate-700 text-slate-200 rounded-xl text-xs">關閉</button>
+                <button onclick="copyBackupText()" class="px-4 py-2 bg-sky-600 text-white font-bold rounded-xl text-xs">複製備份碼</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 還原備份碼彈窗 -->
+    <div id="restore-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl">
+            <h3 class="text-lg font-bold text-emerald-400">還原備份碼</h3>
+            <textarea id="restore-textarea" rows="8" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-[11px] font-mono text-emerald-300" placeholder="在此貼上備份碼..."></textarea>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeRestoreModal()" class="px-4 py-2 bg-slate-700 text-slate-200 rounded-xl text-xs">取消</button>
+                <button onclick="confirmRestoreData()" class="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs">確認還原</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 歷史紀錄彈窗 -->
+    <div id="history-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-4xl p-6 space-y-5 shadow-2xl max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                <h3 class="text-lg font-bold text-indigo-400">歷史紀錄與每週存檔</h3>
+                <button onclick="closeHistoryModal()" class="text-slate-400 hover:text-white text-lg p-2"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="history-list-container" class="overflow-y-auto flex-1 space-y-3 pr-1"></div>
+            <div class="flex justify-end pt-2 border-t border-slate-700"><button onclick="closeHistoryModal()" class="px-4 py-2 bg-slate-700 text-slate-200 rounded-xl text-xs">關閉</button></div>
+        </div>
+    </div>
+
+    <!-- 圖片燈箱預覽 (含明顯關閉按鈕) -->
+    <div id="lightbox" class="fixed inset-0 bg-black/95 backdrop-blur-md hidden z-50 flex flex-col items-center justify-center p-4" onclick="closeLightbox()">
+        <div class="relative max-w-full max-h-[90vh] flex flex-col items-center" onclick="event.stopPropagation()">
+            <button onclick="closeLightbox()" class="absolute -top-14 right-0 px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs shadow-2xl flex items-center gap-2 border border-rose-500/50 cursor-pointer z-50">
+                <i class="fa-solid fa-xmark text-base"></i> 關閉圖片
+            </button>
+            <img id="lightbox-img" class="max-w-full max-h-[82vh] rounded-xl shadow-2xl border border-slate-700 object-contain" alt="放大預覽">
+        </div>
+    </div>
+
+    <!-- Toast 提示訊息 -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-slate-800 border border-slate-700 text-slate-100 px-4 py-3 rounded-xl shadow-2xl hidden z-50 flex items-center gap-3 text-xs">
+        <i class="fa-solid fa-circle-check text-emerald-400 text-base" id="toast-icon"></i>
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'blood-oath-tracker-v88';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+
+        let db = null;
+        let auth = null;
+        let userId = null;
+        let isCloudSynced = false;
+
+        function getRecentSunday(date = new Date()) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day;
+            return new Date(d.setDate(diff)).toISOString().split('T')[0];
+        }
+
+        function getNextSunday(dateStr) {
+            const d = new Date(dateStr);
+            d.setDate(d.getDate() + 7);
+            return d.toISOString().split('T')[0];
+        }
+
+        let globalTargetDate = getRecentSunday();
+        let globalNextDate = getNextSunday(globalTargetDate);
+        let globalUpdateDate = new Date().toISOString().split('T')[0];
+
+        const defaultMembers = [
+            { id: 1, name: '方寒', targetTotal: '264', nextTotal: '320', amount: '287', legacyId: '', image: '', note: '' },
+            { id: 2, name: '米粒', targetTotal: '264', nextTotal: '320', amount: '320', legacyId: '', image: '', note: '' },
+            { id: 3, name: '沃斯泥蝶', targetTotal: '264', nextTotal: '320', amount: '264', legacyId: '', image: '', note: '' },
+            { id: 4, name: '威哥', targetTotal: '264', nextTotal: '320', amount: '430', legacyId: '', image: '', note: '' },
+            { id: 5, name: '周傑輪胎', targetTotal: '264', nextTotal: '320', amount: '324', legacyId: '', image: '', note: '' },
+            { id: 6, name: '灰太狼', targetTotal: '264', nextTotal: '320', amount: '264', legacyId: '', image: '', note: '' },
+            { id: 7, name: '我想想', targetTotal: '264', nextTotal: '320', amount: '270', legacyId: '', image: '', note: '' },
+            { id: 8, name: '法克', targetTotal: '264', nextTotal: '320', amount: '208', legacyId: '', image: '', note: '' },
+            { id: 9, name: '降谷零', targetTotal: '264', nextTotal: '320', amount: '250', legacyId: '', image: '', note: '' },
+            { id: 10, name: '許木', targetTotal: '264', nextTotal: '320', amount: '112', legacyId: 'Ggininde:152張', image: '', note: '' },
+            { id: 11, name: '嘎拉給給', targetTotal: '128', nextTotal: '184', amount: '80', legacyId: '', image: '', note: '8號新人' },
+            { id: 12, name: 'Winnmn', targetTotal: '104', nextTotal: '160', amount: '91', legacyId: '', image: '', note: '11號新人' },
+            { id: 13, name: '威嫂', targetTotal: '56', nextTotal: '112', amount: '56', legacyId: '', image: '', note: '莫忘初衷位置' },
+            { id: 14, name: '酥炸里肌肉', targetTotal: '88', nextTotal: '144', amount: '181', legacyId: '', image: '', note: '乞丐中的霸主' },
+            { id: 15, name: '下雨是因為我在揉太陽穴', targetTotal: '264', nextTotal: '320', amount: '0', legacyId: '寶寶1/寶寶可夢:431張', image: '', note: '' }
+        ];
+
+        let members = [];
+        let historyArchives = [];
+        let historyStack = [];
+        let selectedMemberIds = new Set();
+        let activeEditingMemberId = null;
+
+        window.onload = async function() {
+            const today = new Date().toISOString().split('T')[0];
+            globalTargetDate = getRecentSunday(today);
+            globalNextDate = getNextSunday(globalTargetDate);
+            globalUpdateDate = today;
+
+            document.getElementById('seg1-start').value = today;
+            document.getElementById('seg1-end').value = today;
+            document.getElementById('seg2-start').value = today;
+            document.getElementById('seg2-end').value = today;
+            syncGlobalDateInputsUI();
+
+            if (firebaseConfig) {
+                try {
+                    const app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                    userId = auth.currentUser?.uid || 'default-user';
+                    isCloudSynced = true;
+                    updateCloudStatus(true);
+                    initFirestoreSync();
+                } catch (e) {
+                    updateCloudStatus(false);
+                    loadLocalData();
+                }
+            } else {
+                updateCloudStatus(false);
+                loadLocalData();
+            }
+        };
+
+        function updateCloudStatus(synced) {
+            const el = document.getElementById('cloud-status');
+            if (!el) return;
+            if (synced) {
+                el.className = 'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+                el.innerHTML = '<i class="fa-solid fa-cloud-arrow-up animate-pulse"></i> 雲端即時同步中';
+            } else {
+                el.className = 'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] bg-amber-500/20 text-amber-300 border border-amber-500/30';
+                el.innerHTML = '<i class="fa-solid fa-database"></i> 本地儲存模式';
+            }
+        }
+
+        function loadLocalData() {
+            members = JSON.parse(JSON.stringify(defaultMembers));
+            historyArchives = [];
+            renderAll();
+        }
+
+        function syncGlobalDateInputsUI() {
+            document.getElementById('global-target-date').value = globalTargetDate;
+            document.getElementById('global-next-date').value = globalNextDate;
+            document.getElementById('global-update-date').value = globalUpdateDate;
+        }
+
+        window.updateGlobalDate = function(field, val) {
+            if (field === 'targetDate') {
+                globalTargetDate = val;
+                globalNextDate = getNextSunday(val);
+                document.getElementById('global-next-date').value = globalNextDate;
+            } else if (field === 'nextDate') {
+                globalNextDate = val;
+            } else if (field === 'updateDate') {
+                globalUpdateDate = val;
+            }
+            saveCloudData(false);
+            showToast('已更新日期');
+        };
+
+        function initFirestoreSync() {
+            if (!db || !userId) return;
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'tracker_main_v88');
+            onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    members = data.members && data.members.length > 0 ? data.members : JSON.parse(JSON.stringify(defaultMembers));
+                    historyArchives = data.historyArchives || [];
+                    if (data.globalDates) {
+                        globalTargetDate = data.globalDates.targetDate || globalTargetDate;
+                        globalNextDate = data.globalDates.nextDate || globalNextDate;
+                        globalUpdateDate = data.globalDates.updateDate || globalUpdateDate;
+                        syncGlobalDateInputsUI();
+                    }
+                } else {
+                    members = JSON.parse(JSON.stringify(defaultMembers));
+                    saveCloudData(false);
+                }
+                renderAll();
+            }, () => { loadLocalData(); });
+        }
+
+        async function saveCloudData(pushHist = true) {
+            if (pushHist) pushHistory();
+            const payload = { members, historyArchives, globalDates: { targetDate: globalTargetDate, nextDate: globalNextDate, updateDate: globalUpdateDate } };
+            if (isCloudSynced && db && userId) {
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tracker_main_v88'), { ...payload, updatedAt: new Date().toISOString() });
+                } catch (e) { console.error(e); }
+            }
+            renderAll();
+        }
+
+        function pushHistory() {
+            historyStack.push(JSON.stringify({ members, globalTargetDate, globalNextDate, globalUpdateDate }));
+            if (historyStack.length > 30) historyStack.shift();
+            document.getElementById('btn-undo').disabled = historyStack.length === 0;
+        }
+
+        window.undoLastAction = function() {
+            if (historyStack.length === 0) return;
+            const state = JSON.parse(historyStack.pop());
+            members = state.members;
+            globalTargetDate = state.globalTargetDate;
+            globalNextDate = state.globalNextDate;
+            globalUpdateDate = state.globalUpdateDate;
+            syncGlobalDateInputsUI();
+            saveCloudData(false);
+            showToast('已回到上一步');
+        };
+
+        function renderAll() {
+            renderTable();
+            renderQuickNameChips();
+            document.getElementById('stat-history-count').innerText = historyArchives.length;
+            document.getElementById('btn-undo').disabled = historyStack.length === 0;
+        }
+
+        window.openReadOnlyViewModal = function() {
+            const tbody = document.getElementById('readonly-table-body');
+            tbody.innerHTML = '';
+            members.forEach(m => {
+                let leg = 0;
+                if (m.legacyId) {
+                    const match = m.legacyId.match(/(\d+)/g);
+                    if (match) leg = parseInt(match[match.length - 1]) || 0;
+                }
+                const total = leg + (parseInt(m.amount) || 0);
+                const diff = total - (parseInt(m.targetTotal) || 0);
+                const badge = diff >= 0 ? `<span class="text-emerald-400 font-bold px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-500/35">已達標 (+${diff})</span>` : `<span class="text-amber-400 font-bold px-2 py-0.5 rounded bg-amber-950/40 border border-amber-500/35">未達標 (差${Math.abs(diff)})</span>`;
+                tbody.innerHTML += `<tr class="hover:bg-slate-900/50"><td class="p-3 font-bold text-white">${m.name}</td><td class="p-3 text-purple-300">${m.legacyId || '—'}</td><td class="p-3 text-center font-bold text-amber-400">${m.targetTotal}</td><td class="p-3 text-center font-bold text-emerald-400">${total}</td><td class="p-3 text-center">${badge}</td><td class="p-3 text-center text-slate-300">${m.note || '—'}</td></tr>`;
+            });
+            document.getElementById('readonly-modal').classList.remove('hidden');
+        };
+        window.closeReadOnlyViewModal = () => document.getElementById('readonly-modal').classList.add('hidden');
+
+        window.openDetailedReadOnlyModal = function() {
+            const tbody = document.getElementById('detailed-readonly-table-body');
+            tbody.innerHTML = '';
+            members.forEach(m => {
+                let leg = 0;
+                if (m.legacyId) {
+                    const match = m.legacyId.match(/(\d+)/g);
+                    if (match) leg = parseInt(match[match.length - 1]) || 0;
+                }
+                const total = leg + (parseInt(m.amount) || 0);
+                const diff = total - (parseInt(m.targetTotal) || 0);
+                const proof = m.image ? `<button onclick="openLightbox('${m.image}')" class="px-2 py-1 bg-amber-500/20 text-amber-300 rounded text-[11px]"><i class="fa-solid fa-image"></i> 查看憑證</button>` : '<span class="text-slate-500">無憑證</span>';
+                const statusBadge = diff >= 0 ? `<span class="text-emerald-400 font-bold">超額 (+${diff})</span>` : `<span class="text-amber-400 font-bold">未達 (差${Math.abs(diff)})</span>`;
+                tbody.innerHTML += `<tr class="hover:bg-slate-900/50"><td class="p-3 font-bold text-white">${m.name}</td><td class="p-3 text-purple-300">${m.legacyId || '—'}</td><td class="p-3 text-center font-bold text-amber-400">${m.targetTotal}</td><td class="p-3 text-center font-bold text-sky-400">${m.nextTotal}</td><td class="p-3 text-center font-bold text-emerald-400">${m.amount}</td><td class="p-3 text-center font-bold text-teal-300">${total}</td><td class="p-3 text-center">${statusBadge}</td><td class="p-3 text-center">${proof}</td><td class="p-3 text-center text-slate-300">${m.note || '—'}</td></tr>`;
+            });
+            document.getElementById('detailed-readonly-modal').classList.remove('hidden');
+        };
+        window.closeDetailedReadOnlyModal = () => document.getElementById('detailed-readonly-modal').classList.add('hidden');
+
+        window.copyReadOnlySummaryText = function() {
+            let text = `【落雲宗】盟友公開查詢報表 (精簡版)\n結算日期: ${globalTargetDate}\n-----------------------------------\n`;
+            members.forEach((m, idx) => {
+                let leg = 0;
+                if (m.legacyId) { const match = m.legacyId.match(/(\d+)/g); if (match) leg = parseInt(match[match.length - 1]) || 0; }
+                const total = leg + (parseInt(m.amount) || 0);
+                const diff = total - (parseInt(m.targetTotal) || 0);
+                const status = diff >= 0 ? `已達標(+${diff})` : `未達標(差${Math.abs(diff)})`;
+                text += `${idx + 1}. ${m.name} ｜ 目標:${m.targetTotal} ｜ 總計:${total} ｜ ${status}\n`;
+            });
+            navigator.clipboard.writeText(text);
+            showToast('已複製精簡報表文字');
+        };
+
+        window.copyDetailedReadOnlySummaryText = function() {
+            let text = `【落雲宗】盟友公開查詢報表 (詳細版)\n結算日期: ${globalTargetDate} | 下週目標日: ${globalNextDate}\n-----------------------------------\n`;
+            members.forEach((m, idx) => {
+                let leg = 0;
+                if (m.legacyId) { const match = m.legacyId.match(/(\d+)/g); if (match) leg = parseInt(match[match.length - 1]) || 0; }
+                const total = leg + (parseInt(m.amount) || 0);
+                const diff = total - (parseInt(m.targetTotal) || 0);
+                const status = diff >= 0 ? `超額(+${diff})` : `未達(差${Math.abs(diff)})`;
+                text += `${idx + 1}. ${m.name} [前身:${m.legacyId || '無'}]\n  - 個人目標: ${m.targetTotal} | 下週目標: ${m.nextTotal}\n  - 本週現捐: ${m.amount} | 總捐獻: ${total} (${status})\n  - 備註: ${m.note || '無'}\n-----------------------------------\n`;
+            });
+            navigator.clipboard.writeText(text);
+            showToast('已複製詳細報表文字');
+        };
+
+        window.openBackupModal = function() {
+            document.getElementById('backup-textarea').value = JSON.stringify({ members, historyArchives, globalDates: { targetDate: globalTargetDate, nextDate: globalNextDate, updateDate: globalUpdateDate } });
+            document.getElementById('backup-modal').classList.remove('hidden');
+        };
+        window.closeBackupModal = () => document.getElementById('backup-modal').classList.add('hidden');
+        window.copyBackupText = () => { document.getElementById('backup-textarea').select(); document.execCommand('copy'); showToast('備份碼已完整複製 (含圖片)'); };
+
+        window.openRestoreModal = () => { document.getElementById('restore-textarea').value = ''; document.getElementById('restore-modal').classList.remove('hidden'); };
+        window.closeRestoreModal = () => document.getElementById('restore-modal').classList.add('hidden');
+        window.confirmRestoreData = function() {
+            try {
+                const parsed = JSON.parse(document.getElementById('restore-textarea').value.trim());
+                pushHistory();
+                members = Array.isArray(parsed) ? parsed : (parsed.members || members);
+                historyArchives = parsed.historyArchives || [];
+                if (parsed.globalDates) {
+                    globalTargetDate = parsed.globalDates.targetDate || globalTargetDate;
+                    globalNextDate = parsed.globalDates.nextDate || globalNextDate;
+                    globalUpdateDate = parsed.globalDates.updateDate || globalUpdateDate;
+                    syncGlobalDateInputsUI();
+                }
+                saveCloudData(false);
+                closeRestoreModal();
+                showToast('還原成功');
+            } catch(e) { showToast('還原格式錯誤', 'error'); }
+        };
+
+        window.triggerWeeklyRollover = function() {
+            if (!confirm('確定要執行跨週結算遞補嗎？')) return;
+            pushHistory();
+            historyArchives.unshift({ dateLabel: globalTargetDate, timestamp: new Date().toLocaleString(), memberssnapshot: JSON.parse(JSON.stringify(members)) });
+            globalTargetDate = globalNextDate;
+            globalNextDate = getNextSunday(globalTargetDate);
+            syncGlobalDateInputsUI();
+            members.forEach(m => {
+                const nextVal = parseInt(m.nextTotal) || parseInt(m.targetTotal) || 0;
+                m.legacyId = m.legacyId ? `${m.legacyId} -> 本週:${m.targetTotal}` : `本週:${m.targetTotal}`;
+                m.targetTotal = nextVal;
+                m.nextTotal = nextVal + 56;
+            });
+            saveCloudData(false);
+            showToast('跨週結算遞補完成');
+        };
+
+        window.openHistoryModal = function() {
+            const container = document.getElementById('history-list-container');
+            container.innerHTML = historyArchives.length === 0 ? '<div class="text-center text-slate-500 py-4">尚無歷史紀錄</div>' : historyArchives.map((a, i) => `<div class="bg-slate-900 p-3 rounded-xl border border-slate-700 flex justify-between items-center text-xs"><span class="text-amber-400 font-bold">結算日期: ${a.dateLabel}</span><button onclick="restoreArchive(${i})" class="px-2 py-1 bg-purple-600 text-white rounded">恢復</button></div>`).join('');
+            document.getElementById('history-modal').classList.remove('hidden');
+        };
+        window.closeHistoryModal = () => document.getElementById('history-modal').classList.add('hidden');
+        window.restoreArchive = function(i) {
+            if (!confirm('確定恢復此版本？')) return;
+            pushHistory();
+            members = JSON.parse(JSON.stringify(historyArchives[i].memberssnapshot));
+            saveCloudData(false);
+            closeHistoryModal();
+            showToast('已還原歷史版本');
+        };
+
+        window.toggleBatchSection = () => {
+            document.getElementById('batch-content').classList.toggle('hidden');
+            document.getElementById('batch-chevron').classList.toggle('rotate-180');
+        };
+
+        function renderQuickNameChips() {
+            const container = document.getElementById('quick-name-chips');
+            container.innerHTML = members.map(m => `<button type="button" onclick="toggleQuickChip(${m.id})" class="px-2.5 py-1 rounded-lg text-xs font-bold transition ${selectedMemberIds.has(m.id) ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-300 border border-slate-700'}">${m.name}</button>`).join('');
+        }
+        window.toggleQuickChip = function(id) {
+            if (selectedMemberIds.has(id)) selectedMemberIds.delete(id); else selectedMemberIds.add(id);
+            renderTable(); renderQuickNameChips();
+        };
+        window.quickSelectAllNames = (select) => { if(select) members.forEach(m => selectedMemberIds.add(m.id)); else selectedMemberIds.clear(); renderTable(); renderQuickNameChips(); };
+
+        function renderTable() {
+            const tbody = document.getElementById('members-table-body');
+            tbody.innerHTML = '';
+            members.forEach(m => {
+                const isSelected = selectedMemberIds.has(m.id);
+                let leg = 0;
+                if (m.legacyId) {
+                    const match = m.legacyId.match(/(\d+)/g);
+                    if (match) leg = parseInt(match[match.length - 1]) || 0;
+                }
+                const total = leg + (parseInt(m.amount) || 0);
+                const diff = total - (parseInt(m.targetTotal) || 0);
+                const badge = diff >= 0 ? `<div class="text-[10px] px-2 py-0.5 rounded border text-emerald-400 bg-emerald-950/40 border-emerald-500/35">總計${total} (超額+${diff})</div>` : `<div class="text-[10px] px-2 py-0.5 rounded border text-amber-400 bg-amber-950/40 border-amber-500/35">總計${total} (差${Math.abs(diff)})</div>`;
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-700/40 transition ${isSelected ? 'bg-amber-500/10' : ''}">
+                        <td class="p-3 text-center"><input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleSelectMember(${m.id}, this)" class="rounded bg-slate-900 border-slate-700 text-amber-500 w-4 h-4 cursor-pointer"></td>
+                        <td class="p-3">
+                            <div class="space-y-1.5">
+                                <div class="flex items-center gap-2">
+                                    <input type="text" value="${m.name}" onchange="updateMemberField(${m.id}, 'name', this.value)" class="w-full min-w-[320px] bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs sm:text-sm text-slate-100 font-bold focus:outline-none focus:border-amber-500">
+                                    <button onclick="copyMemberName('${m.name}')" class="px-2.5 py-1.5 bg-sky-600/20 text-sky-300 border border-sky-500/30 rounded-lg text-xs shrink-0"><i class="fa-solid fa-copy"></i></button>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] text-purple-400 shrink-0">前身:</span>
+                                    <input type="text" value="${m.legacyId || ''}" onchange="updateMemberField(${m.id}, 'legacyId', this.value)" class="w-full bg-slate-950/60 border border-slate-700 rounded px-2 py-1 text-[11px] text-purple-300">
+                                </div>
+                            </div>
+                        </td>
+                        <td class="p-3 text-center"><div class="flex flex-col items-center space-y-1"><input type="number" value="${m.targetTotal}" onchange="updateMemberField(${m.id}, 'targetTotal', this.value)" class="w-24 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-sm text-amber-400 font-bold text-center">${badge}</div></td>
+                        <td class="p-3 text-center"><input type="number" value="${m.nextTotal}" onchange="updateMemberField(${m.id}, 'nextTotal', this.value)" class="w-24 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-sm text-sky-400 font-bold text-center"></td>
+                        <td class="p-3 text-center">
+                            <div class="space-y-2 flex flex-col items-center">
+                                <input type="number" value="${m.amount}" onchange="updateMemberField(${m.id}, 'amount', this.value)" class="w-20 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-sm text-emerald-400 font-bold text-center">
+                                <div class="flex items-center gap-2">
+                                    <label class="px-2 py-1 bg-slate-700 text-slate-200 rounded text-xs cursor-pointer"><i class="fa-solid fa-image"></i> 插入<input type="file" accept="image/*" class="hidden" onchange="uploadMemberImage(${m.id}, event)"></label>
+                                    ${m.image ? `<button onclick="openLightbox('${m.image}')" class="text-amber-400 text-xs"><i class="fa-solid fa-eye"></i></button><button onclick="removeMemberImage(${m.id})" class="text-rose-400 text-xs"><i class="fa-solid fa-trash"></i></button>` : ''}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="p-3 text-center"><div onclick="openNoteModal(${m.id})" class="bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-300 cursor-pointer text-center max-w-[150px] mx-auto truncate">${m.note || '—'}</div></td>
+                        <td class="p-3 text-center"><button onclick="deleteMember(${m.id})" class="p-2 bg-rose-600/20 text-rose-300 rounded-lg"><i class="fa-solid fa-trash-can"></i></button></td>
+                    </tr>
+                `;
+            });
+            document.getElementById('selected-count-badge').innerText = `已選 ${selectedMemberIds.size} 位`;
+            document.getElementById('btn-selected-count').innerText = selectedMemberIds.size;
+        }
+
+        window.copyMemberName = (name) => { navigator.clipboard.writeText(name); showToast(`已複製: ${name}`); };
+        window.updateMemberField = (id, field, val) => { const m = members.find(x => x.id === id); if(m) { m[field] = val; if(field === 'targetTotal') m.nextTotal = (parseInt(val)||0) + 56; saveCloudData(); } };
+        window.toggleSelectMember = (id, cb) => { if(cb.checked) selectedMemberIds.add(id); else selectedMemberIds.delete(id); renderTable(); renderQuickNameChips(); };
+        window.toggleSelectAll = (cb) => { if(cb.checked) members.forEach(m => selectedMemberIds.add(m.id)); else selectedMemberIds.clear(); renderTable(); renderQuickNameChips(); };
+        window.clearSelection = () => { selectedMemberIds.clear(); renderTable(); renderQuickNameChips(); };
+
+        window.uploadMemberImage = function(id, event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => { const m = members.find(x => x.id === id); if(m) { pushHistory(); m.image = e.target.result; saveCloudData(false); showToast('憑證已插入'); } };
+            reader.readAsDataURL(file);
+        };
+        window.batchUploadImages = function(event) {
+            const file = event.target.files[0];
+            const target = members.filter(m => selectedMemberIds.has(m.id));
+            if (!file || target.length === 0) { showToast('請先勾選成員', 'error'); return; }
+            const reader = new FileReader();
+            reader.onload = (e) => { pushHistory(); target.forEach(m => m.image = e.target.result); saveCloudData(false); showToast('批量插入成功'); };
+            reader.readAsDataURL(file);
+        };
+        window.removeMemberImage = (id) => { const m = members.find(x => x.id === id); if(m) { pushHistory(); m.image = ''; saveCloudData(false); showToast('已移除憑證'); } };
+
+        window.openNoteModal = (id) => { activeEditingMemberId = id; const m = members.find(x => x.id === id); document.getElementById('modal-member-name').innerText = m.name; document.getElementById('modal-note-textarea').value = m.note === '—' ? '' : m.note; document.getElementById('note-modal').classList.remove('hidden'); };
+        window.closeNoteModal = () => { activeEditingMemberId = null; document.getElementById('note-modal').classList.add('hidden'); };
+        window.saveNoteModal = () => { if(activeEditingMemberId !== null) { const m = members.find(x => x.id === activeEditingMemberId); if(m) { pushHistory(); m.note = document.getElementById('modal-note-textarea').value.trim(); saveCloudData(false); showToast('備註已更新'); } } closeNoteModal(); };
+
+        window.deleteMember = (id) => { if(confirm('確定刪除？')) { pushHistory(); members = members.filter(x => x.id !== id); selectedMemberIds.delete(id); saveCloudData(false); showToast('已刪除'); } };
+
+        window.applyBatchTargets = function(isAll) {
+            const target = isAll ? members : members.filter(m => selectedMemberIds.has(m.id));
+            if (target.length === 0) { showToast('未選取成員', 'error'); return; }
+            const s1Start = new Date(document.getElementById('seg1-start').value);
+            const s1End = new Date(document.getElementById('seg1-end').value);
+            const s1Days = (!isNaN(s1Start) && !isNaN(s1End)) ? Math.floor((s1End - s1Start)/(1000*60*60*24))+1 : 0;
+            const s1Rate = parseInt(document.getElementById('seg1-rate').value)||0;
+            const s2Start = new Date(document.getElementById('seg2-start').value);
+            const s2End = new Date(document.getElementById('seg2-end').value);
+            const s2Days = (!isNaN(s2Start) && !isNaN(s2End)) ? Math.floor((s2End - s2Start)/(1000*60*60*24))+1 : 0;
+            const s2Rate = parseInt(document.getElementById('seg2-rate').value)||0;
+            const total = (s1Days * s1Rate) + (s2Days * s2Rate);
+            pushHistory();
+            target.forEach(m => { m.targetTotal = total; m.nextTotal = total + 56; });
+            saveCloudData(false);
+            showToast('批量設定完成');
+        };
+
+        window.copyAsTextFile = function() {
+            const list = members.filter(m => {
+                let leg = 0;
+                if (m.legacyId) { const match = m.legacyId.match(/(\d+)/g); if (match) leg = parseInt(match[match.length - 1]) || 0; }
+                return (leg + (parseInt(m.amount)||0)) < (parseInt(m.targetTotal)||0);
+            });
+            let text = `【落雲宗】未達標名單 (${globalTargetDate})\n`;
+            list.forEach((m, idx) => {
+                let leg = 0; if (m.legacyId) { const match = m.legacyId.match(/(\d+)/g); if (match) leg = parseInt(match[match.length - 1]) || 0; }
+                const diff = (parseInt(m.targetTotal)||0) - (leg + (parseInt(m.amount)||0));
+                text += `${idx + 1}. ${m.name} ｜ 差 ${diff} 張\n`;
+            });
+            navigator.clipboard.writeText(text);
+            showToast('已複製未達標報表');
+        };
+
+        window.exportToImage = () => {
+            showToast('產生圖片中...');
+            html2canvas(document.getElementById('capture-area'), { scale: 2, backgroundColor: '#0f172a', useCORS: true }).then(canvas => {
+                const link = document.createElement('a'); link.download = `落雲宗血盟_${new Date().toISOString().split('T')[0]}.png`; link.href = canvas.toDataURL('image/png'); link.click();
+                showToast('圖片匯出成功');
+            });
+        };
+
+        window.exportToExcel = () => {
+            const data = members.map(m => ({ '名稱': m.name, '前身': m.legacyId, '目標': m.targetTotal, '現捐': m.amount, '備註': m.note }));
+            const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "紀錄");
+            XLSX.writeFile(wb, `落雲宗血盟_${new Date().toISOString().split('T')[0]}.xlsx`);
+            showToast('Excel匯出成功');
+        };
+
+        window.resetAllData = () => { if(confirm('確定重置？')) { pushHistory(); members = JSON.parse(JSON.stringify(defaultMembers)); historyArchives = []; saveCloudData(false); showToast('已重置'); } };
+        window.showToast = (msg, type='success') => {
+            const t = document.getElementById('toast'); document.getElementById('toast-msg').innerText = msg;
+            document.getElementById('toast-icon').className = type === 'error' ? 'fa-solid fa-circle-exclamation text-rose-400' : 'fa-solid fa-circle-check text-emerald-400';
+            t.classList.remove('hidden'); setTimeout(() => t.classList.add('hidden'), 3000);
+        };
+        window.openLightbox = (url) => { document.getElementById('lightbox-img').src = url; document.getElementById('lightbox').classList.remove('hidden'); };
+        window.closeLightbox = () => document.getElementById('lightbox').classList.add('hidden');
+    </script>
+</body>
+</html>
